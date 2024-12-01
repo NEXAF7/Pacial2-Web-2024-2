@@ -7,13 +7,13 @@ export class BonoEntity {
     @Column()
     monto: number;
 
-    @Column()
+    @Column("float")
     calificacion: number;
 
     @Column()
-    palabraClave: String;
+    palabraClave: string;
 
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number;
 
     @ManyToOne(() => UsuarioEntity, usuario => usuario.bonos)

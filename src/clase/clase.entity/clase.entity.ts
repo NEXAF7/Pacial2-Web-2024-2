@@ -5,15 +5,15 @@ import { BonoEntity } from '../../bono/bono.entity/bono.entity';
 @Entity()
 export class ClaseEntity {
     @Column()
-    nombre: String;
+    nombre: string;
 
     @Column()
-    codigo: string;;
+    codigo: string;
    
     @Column()
     numeroCreditos: number;
 
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number;
 
     @OneToMany(() => BonoEntity, bonos => bonos.clase)

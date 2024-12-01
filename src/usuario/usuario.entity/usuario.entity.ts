@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { BonoEntity } from '../../bono/bono.entity/bono.entity';
 import { ClaseEntity } from '../../clase/clase.entity/clase.entity';
 
@@ -8,21 +8,18 @@ export class UsuarioEntity {
     cedula: number;
    
     @Column()
-    nombre: String;
+    nombre: string;
    
     @Column()
-    grupoInvestigacion: String;
+    grupoInvestigacion: string;
     
     @Column()
     numeroExtension: number;
 
     @Column()
-    rol: String;
-
-    @Column()
-    jefe: String;
+    rol: string;
     
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number;
 
     @OneToMany(() => BonoEntity, bonos => bonos.usuario)
@@ -30,4 +27,8 @@ export class UsuarioEntity {
 
     @OneToMany(() => ClaseEntity, clases => clases.usuario)
     clases: ClaseEntity[];
+
+    @OneToOne(() => UsuarioEntity, (jefe) => jefe.usuario)
+    @JoinColumn()
+    usuario: UsuarioEntity;
 }

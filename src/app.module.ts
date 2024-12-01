@@ -17,7 +17,7 @@ import { BonoEntity } from "./bono/bono.entity/bono.entity";
       port: 5432,
       username: 'postgres',
       password: '',
-      database: 'estudiante',
+      database: 'usuario',
       entities: [BonoEntity, ClaseEntity, UsuarioEntity],
       dropSchema: true,
       synchronize: true,

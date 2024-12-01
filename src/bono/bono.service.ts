@@ -1,65 +1,111 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UsuarioEntity } from'../usuario/usuario.entity/usuario.entity';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
-import { ClaseEntity } from '../clase/clase.entity/clase.entity';
 import { BonoEntity } from '../bono/bono.entity/bono.entity';
-import { UsuarioService } from '../usuario/usuario.service';
+import { UsuarioEntity } from '../usuario/usuario.entity/usuario.entity';
 
 @Injectable()
 export class BonoService {
-    constructor(
-        @InjectRepository(BonoEntity)
-        private readonly BonoRepository: Repository<BonoEntity>,
+  constructor(
+    @InjectRepository(BonoEntity)
+    private readonly bonoRepository: Repository<BonoEntity>,
 
-        @InjectRepository(UsuarioEntity)
-        private readonly UsuarioService: UsuarioService,
+    @InjectRepository(UsuarioEntity)
+    private readonly usuarioRepository: Repository<UsuarioEntity>,
+  ) {}
 
-    ){}
+  async crearBono(bono: BonoEntity, usuarioId: number): Promise<BonoEntity> {
+    const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
+    if (!usuario) {
+      throw new NotFoundException('The user does not exist');
+    }
+  
+    if (bono.monto <= 0) {
+      throw new BusinessLogicException(
+        'The bonus amount should be positive',
+        BusinessError.BAD_REQUEST,
+      );
+    }
+  
+    if (!usuario.rol || usuario.rol !== 'Profesor') {
+      throw new BusinessLogicException(
+        'Only professors can create bonuses',
+        BusinessError.BAD_REQUEST,
+      );
+    }
+  
+    bono.usuario = usuario;
+    return this.bonoRepository.save(bono);
+  }
 
-    async createBono(Bono: BonoEntity, Usuario: UsuarioEntity) {
-        if (Bono.monto > 0) {
-          throw new BusinessLogicException(
-            'The bonus should be positive',
-            BusinessError.BAD_REQUEST,
-          );
-        }
-        if (Usuario.rol == null ||
-            Usuario.rol.trim() == '' ||
-            Usuario.rol.length < 8)
-        {
-            throw new BusinessLogicException("The bonus is not valid", BusinessError.BAD_REQUEST);
-        }
-        else {
-            return await this.BonoRepository.save(Bono);
-        }
+  async findBonoByCodigo(codigo: string): Promise<BonoEntity> {
+    const bono = await this.bonoRepository.findOne({
+      where: { palabraClave: codigo },
+      relations: ['usuario'],
+    });
+    
+    if (!bono) {
+      throw new Error('The bonus with the given ID was not found');
+    }
+    return bono;
+  }
+  
+  async findBonoById(id: number): Promise<BonoEntity> {
+    const bono = await this.bonoRepository.findOne({
+      where: { id },
+      relations: ['usuario', 'clase'],
+    });
+  
+    if (!bono) {
+      throw new NotFoundException('The bonus with the given ID was not found');
+    }
+  
+    return bono;
+  }
+  
+  
+  async findAllBonosByUsuario(usuarioId: number): Promise<BonoEntity[]> {
+    const usuario: UsuarioEntity = await this.usuarioRepository.findOne({
+      where: { id: usuarioId },
+      relations: ['bonos', 'bonos.usuario'],
+    });
+  
+    if (!usuario) {
+      throw new BusinessLogicException(
+        'The bonus with ID was not found',
+        BusinessError.NOT_FOUND,
+      );
+    }
+  
+    if (!usuario.bonos || usuario.bonos.length === 0) {
+      throw new BusinessLogicException(
+        'The user with the given ID does not have any bonuses',
+        BusinessError.NOT_FOUND,
+      );
+    }
+  
+    return usuario.bonos;
+  }
+  
+  async deleteBonoById(id: number): Promise<void> {
+    const bono: BonoEntity = await this.bonoRepository.findOne({
+      where: { id }
+    });
+    if (!bono) {
+      throw new BusinessLogicException(
+        'The bonus with the given ID was not found',
+        BusinessError.NOT_FOUND,
+      );
     }
 
-    async findBonoById(id: number): Promise<BonoEntity> {
-        const Bono: BonoEntity = await this.BonoRepository.findOne({where: {id}, relations: ["clases", "bonos"] } );
-        if (!Bono)
-        throw new BusinessLogicException("The Bono with the given id was not found", BusinessError.NOT_FOUND);
-      return Bono;
-    }        
-
-    async findAllBonosByUser(id: number): Promise<BonoEntity> {
-        const Usuario: BonoEntity = await this.BonoRepository.findOne({where: {id}, relations: ["clases", "usuario"] } );
-        if (!Usuario)
-        throw new BusinessLogicException("The Bono with the given user was not found", BusinessError.NOT_FOUND);
-      return Usuario;
-    }    
-
-      async deleteBonoById (id: number) {
-        const Bono: BonoEntity = await this.BonoRepository.findOne({
-          where: { id },
-        });
-        if (!Bono)
-          throw new BusinessLogicException(
-            'The bonus with the given id was not found',
-            BusinessError.NOT_FOUND,
-          );
-        await this.BonoRepository.remove(Bono);
+    if (bono.calificacion > 4) {
+      throw new BusinessLogicException(
+        'The bonus cannot be deleted because the grade is above 4',
+        BusinessError.BAD_REQUEST,
+      );
     }
+
+    await this.bonoRepository.remove(bono);
+  }
 }
-
